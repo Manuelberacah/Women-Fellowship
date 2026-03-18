@@ -1,0 +1,1 @@
+export const NEXT_EVENT_DATE = "2026-05-12T09:00:00+05:30";

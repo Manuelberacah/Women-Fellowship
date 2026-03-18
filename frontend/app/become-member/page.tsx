@@ -112,10 +112,13 @@ export default function BecomeMemberPage() {
     }
 
     setIsVerifying(true);
+    const digitsOnly = form.phone.replace(/\D/g, "");
+    const identifier = form.phone.startsWith("+") ? form.phone : `+91${digitsOnly}`;
+
     const configuration = {
       widgetId: MSG91_WIDGET_ID,
       tokenAuth: MSG91_TOKEN_AUTH,
-      identifier: form.phone,
+      identifier,
       exposeMethods: true,
       success: async (data: any) => {
         console.log("[OTP] Success callback", data);
@@ -157,7 +160,14 @@ export default function BecomeMemberPage() {
       }
     };
 
-    window.initSendOTP(configuration);
+    try {
+      const result = window.initSendOTP(configuration);
+      console.log("[OTP] initSendOTP returned", result);
+    } catch (error) {
+      console.error("[OTP] initSendOTP error", error);
+      setMessage("Unable to start OTP. Please try again.");
+      setIsVerifying(false);
+    }
   };
 
   return (

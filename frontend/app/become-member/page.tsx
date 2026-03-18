@@ -32,6 +32,7 @@ export default function BecomeMemberPage() {
   useEffect(() => {
     if (mode !== "phone") return;
     if (document.querySelector("script[data-msg91-otp]")) {
+      console.log("[OTP] Script already present");
       setScriptReady(true);
       return;
     }
@@ -44,8 +45,12 @@ export default function BecomeMemberPage() {
       script.src = urls[index];
       script.async = true;
       script.dataset.msg91Otp = "true";
-      script.onload = () => setScriptReady(true);
+      script.onload = () => {
+        console.log("[OTP] Script loaded", script.src);
+        setScriptReady(true);
+      };
       script.onerror = () => {
+        console.warn("[OTP] Script failed", script.src);
         index += 1;
         if (index < urls.length) attemptLoad();
       };
@@ -80,6 +85,13 @@ export default function BecomeMemberPage() {
   };
 
   const handleVerifyPhone = async () => {
+    console.log("[OTP] Verify click", {
+      widgetId: Boolean(MSG91_WIDGET_ID),
+      tokenAuth: Boolean(MSG91_TOKEN_AUTH),
+      phone: form.phone,
+      scriptReady,
+      hasInit: Boolean(window.initSendOTP)
+    });
     setMessage(null);
     if (cooldownUntil && Date.now() < cooldownUntil) {
       const seconds = Math.ceil((cooldownUntil - Date.now()) / 1000);
@@ -106,6 +118,7 @@ export default function BecomeMemberPage() {
       identifier: form.phone,
       exposeMethods: true,
       success: async (data: any) => {
+        console.log("[OTP] Success callback", data);
         const accessToken = data?.access_token || data?.accessToken || data?.token;
         if (!accessToken) {
           setMessage("OTP verified but no access token returned.");
@@ -138,6 +151,7 @@ export default function BecomeMemberPage() {
         }
       },
       failure: (error: any) => {
+        console.warn("[OTP] Failure callback", error);
         setMessage(error?.message || "OTP verification failed.");
         setIsVerifying(false);
       }

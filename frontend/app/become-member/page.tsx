@@ -120,7 +120,6 @@ export default function BecomeMemberPage() {
       tokenAuth: MSG91_TOKEN_AUTH,
       identifier,
       containerId: "otp-container",
-      exposeMethods: true,
       success: async (data: any) => {
         console.log("[OTP] Success callback", data);
         const accessToken = data?.access_token || data?.accessToken || data?.token;

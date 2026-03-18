@@ -122,7 +122,7 @@ export default function BecomeMemberPage() {
       containerId: "otp-container",
       success: async (data: any) => {
         console.log("[OTP] Success callback", data);
-        const accessToken = data?.access_token || data?.accessToken || data?.token;
+        const accessToken = data?.access_token || data?.accessToken || data?.token || data?.message;
         if (!accessToken) {
           setMessage("OTP verified but no access token returned.");
           setIsVerifying(false);

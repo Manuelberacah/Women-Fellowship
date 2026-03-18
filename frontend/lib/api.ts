@@ -37,7 +37,7 @@ export async function fetchAnnouncements() {
   return response.data?.announcements || [];
 }
 
-export async function registerMember(payload: Record<string, string>) {
+export async function registerMember(payload: Record<string, string | boolean>) {
   const response = await axios.post(`${API_BASE}/auth/register`, payload);
   return response.data;
 }

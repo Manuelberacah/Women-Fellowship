@@ -119,6 +119,7 @@ export default function BecomeMemberPage() {
       widgetId: MSG91_WIDGET_ID,
       tokenAuth: MSG91_TOKEN_AUTH,
       identifier,
+      containerId: "otp-container",
       exposeMethods: true,
       success: async (data: any) => {
         console.log("[OTP] Success callback", data);
@@ -248,6 +249,10 @@ export default function BecomeMemberPage() {
               </button>
               <span className="text-sm text-slate-500">{otpVerified ? "Verified" : "Not verified yet"}</span>
             </div>
+          )}
+
+          {mode === "phone" && (
+            <div id="otp-container" className="md:col-span-2" />
           )}
 
           {message && <p className="text-sm text-primary-700 md:col-span-2">{message}</p>}

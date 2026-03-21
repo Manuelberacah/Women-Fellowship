@@ -31,7 +31,8 @@ app.use(
   cors({
     origin: (origin, callback) => {
       const ok = isOriginAllowed(origin);
-      callback(ok ? null : new Error("Not allowed by CORS"), ok);
+      // Don't throw; just disallow so the request fails cleanly.
+      callback(null, ok);
     }
   })
 );

@@ -30,8 +30,8 @@ const isOriginAllowed = (origin) => {
 app.use(
   cors({
     origin: (origin, callback) => {
+      if (allowedOrigins.includes("*")) return callback(null, true);
       const ok = isOriginAllowed(origin);
-      // Don't throw; just disallow so the request fails cleanly.
       callback(null, ok);
     }
   })

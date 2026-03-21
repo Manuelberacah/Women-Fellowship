@@ -148,11 +148,17 @@ export default function BecomeMemberPage() {
           }
           setCooldownUntil(Date.now() + 10000);
         } catch (error: any) {
+          const provider = error?.response?.data?.provider;
           const apiMessage =
             error?.response?.data?.message ||
-            error?.response?.data?.provider?.message ||
-            error?.response?.data?.provider?.type;
-          setMessage(apiMessage ? `Unable to verify OTP: ${apiMessage}` : "Unable to verify OTP with server. Please try again.");
+            provider?.message ||
+            provider?.type;
+          const details = provider ? ` (${JSON.stringify(provider)})` : "";
+          setMessage(
+            apiMessage
+              ? `Unable to verify OTP: ${apiMessage}${details}`
+              : "Unable to verify OTP with server. Please try again."
+          );
         } finally {
           setIsVerifying(false);
         }

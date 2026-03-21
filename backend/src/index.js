@@ -16,7 +16,25 @@ const contactRoutes = require("./routes/contactRoutes");
 
 const app = express();
 
-app.use(cors({ origin: process.env.FRONTEND_URL || "*" }));
+const allowedOrigins = (process.env.FRONTEND_URL || "")
+  .split(",")
+  .map((value) => value.trim())
+  .filter(Boolean);
+
+const isOriginAllowed = (origin) => {
+  if (!allowedOrigins.length || allowedOrigins.includes("*")) return true;
+  if (!origin) return true;
+  const normalize = (value) => value.replace(/\/+$/, "");
+  return allowedOrigins.some((allowed) => normalize(allowed) === normalize(origin));
+};
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      const ok = isOriginAllowed(origin);
+      callback(ok ? null : new Error("Not allowed by CORS"), ok);
+    }
+  })
+);
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 

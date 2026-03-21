@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
+import { useRef } from "react";
 
 const links = [
   { label: "Home", href: "/" },
@@ -15,6 +17,31 @@ const links = [
 ];
 
 export default function Navbar() {
+  const router = useRouter();
+  const clickCount = useRef(0);
+  const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleLogoClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    clickCount.current += 1;
+
+    if (clickTimer.current) {
+      clearTimeout(clickTimer.current);
+    }
+
+    clickTimer.current = setTimeout(() => {
+      clickCount.current = 0;
+    }, 600);
+
+    if (clickCount.current === 3) {
+      event.preventDefault();
+      clickCount.current = 0;
+      if (clickTimer.current) {
+        clearTimeout(clickTimer.current);
+      }
+      router.push("/admin");
+    }
+  };
+
   return (
     <motion.header
       initial={{ y: -40, opacity: 0 }}
@@ -23,7 +50,7 @@ export default function Navbar() {
       className="fixed top-0 z-50 w-full border-b border-white/30 bg-soft-white/80 backdrop-blur"
     >
       <div className="section-pad flex items-center justify-between py-4">
-        <Link href="/" className="font-display text-xl tracking-wide text-primary-900">
+        <Link href="/" onClick={handleLogoClick} className="font-display text-xl tracking-wide text-primary-900">
           EUREKA
         </Link>
         <nav className="hidden items-center gap-6 lg:flex">

@@ -50,6 +50,13 @@ app.use("/api/registrations", registrationRoutes);
 app.use("/api/contact", contactRoutes);
 
 app.get("/api/health", (_, res) => res.json({ status: "ok" }));
+app.get("/api/cors-check", (req, res) => {
+  res.json({
+    status: "ok",
+    origin: req.headers.origin || null,
+    allowedOrigins: allowedOrigins.length ? allowedOrigins : ["*"]
+  });
+});
 
 const start = async () => {
   try {

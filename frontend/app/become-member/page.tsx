@@ -147,8 +147,12 @@ export default function BecomeMemberPage() {
             setMessage("Phone verified successfully.");
           }
           setCooldownUntil(Date.now() + 10000);
-        } catch {
-          setMessage("Unable to verify OTP with server. Please try again.");
+        } catch (error: any) {
+          const apiMessage =
+            error?.response?.data?.message ||
+            error?.response?.data?.provider?.message ||
+            error?.response?.data?.provider?.type;
+          setMessage(apiMessage ? `Unable to verify OTP: ${apiMessage}` : "Unable to verify OTP with server. Please try again.");
         } finally {
           setIsVerifying(false);
         }

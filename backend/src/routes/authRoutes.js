@@ -100,7 +100,7 @@ router.post("/verify-msg91", async (req, res) => {
     const data = await response.json().catch(() => ({}));
     const status = String(data?.type || data?.status || "").toLowerCase();
     const ok = response.ok && status !== "error" && status !== "failed" && status !== "failure";
-    if (!ok) return res.status(400).json({ message: "OTP verification failed", provider: data });
+    if (!ok) return res.status(400).json({ message: "OTP verification failed", provider: data, statusCode: response.status });
 
     let user = null;
     if (phone) {

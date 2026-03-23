@@ -38,35 +38,48 @@ export default function PrayerRequestsPage() {
       }}
     >
       <div className="absolute inset-0 bg-gradient-to-r from-primary-950/80 via-primary-950/55 to-primary-950/35" />
+      <div className="absolute inset-0 bg-white/60" />
       <div className="relative z-10">
-        <SectionHeader eyebrow="Prayer Requests" title="We Are Praying With You">
-          Submit your prayer needs and let the community lift you up in prayer.
-        </SectionHeader>
-        <form onSubmit={handleSubmit} className="max-w-2xl rounded-3xl bg-white/95 p-8 shadow-card">
-          <input
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="Name"
-            className="mb-4 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-            required
-          />
-          <textarea
-            value={request}
-            onChange={(event) => setRequest(event.target.value)}
-            placeholder="Prayer Request"
-            rows={4}
-            className="mb-4 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-            required
-          />
-          {status && <p className="mb-4 text-sm text-primary-700">{status}</p>}
-          <button
-            className="inline-flex items-center gap-2 rounded-full bg-primary-700 px-6 py-3 text-sm font-semibold text-white"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? <Spinner /> : null}
-            Submit Request
-          </button>
-        </form>
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,2fr),minmax(0,1fr)]">
+          <div>
+            <SectionHeader eyebrow="Prayer Requests" title="We Are Praying With You">
+              Submit your prayer needs and let the community lift you up in prayer.
+            </SectionHeader>
+            <form onSubmit={handleSubmit} className="max-w-2xl rounded-3xl bg-white/95 p-8 shadow-card">
+              <input
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="Name"
+                className="mb-4 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                required
+              />
+              <textarea
+                value={request}
+                onChange={(event) => setRequest(event.target.value)}
+                placeholder="Prayer Request"
+                rows={4}
+                className="mb-4 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                required
+              />
+              {status && <p className="mb-4 text-sm text-primary-700">{status}</p>}
+              <button
+                className="inline-flex items-center gap-2 rounded-full bg-primary-700 px-6 py-3 text-sm font-semibold text-white"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? <Spinner /> : null}
+                Submit Request
+              </button>
+            </form>
+          </div>
+          <aside className="hidden lg:flex items-center justify-end">
+            <div className="max-w-sm text-right text-primary-900/85 drop-shadow-lg animate-verse-float translate-y-2">
+              <p className="font-display text-2xl italic">
+                "Do not be anxious about anything, but in every situation, by prayer and petition, with thanksgiving, present your requests to God."
+              </p>
+              <p className="mt-3 text-sm font-semibold text-primary-800">Philippians 4:6</p>
+            </div>
+          </aside>
+        </div>
       </div>
     </section>
   );

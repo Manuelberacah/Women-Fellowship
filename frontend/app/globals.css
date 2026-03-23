@@ -50,3 +50,19 @@ body {
     transform: translateX(-50%);
   }
 }
+
+@keyframes verse-float {
+  0% {
+    transform: translateY(6px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+  100% {
+    transform: translateY(6px);
+  }
+}
+
+.animate-verse-float {
+  animation: verse-float 6s ease-in-out infinite;
+}

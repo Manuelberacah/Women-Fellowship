@@ -32,9 +32,26 @@ export default function PrayerRequestFab() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-50 rounded-full bg-primary-700 px-4 py-3 text-sm font-semibold text-white shadow-glow"
+        aria-label="Submit a Prayer Request"
+        className="group fixed bottom-24 right-6 z-50 inline-flex h-12 w-12 aspect-square items-center justify-center gap-0 rounded-full bg-primary-700 p-0 text-sm font-semibold text-white shadow-glow transition-all duration-200 group-hover:w-auto group-hover:px-4 group-hover:gap-3 group-focus-within:w-auto group-focus-within:px-4 group-focus-within:gap-3 sm:bottom-6"
       >
-        Submit a Prayer Request
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          className="h-5 w-5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M21 14a4 4 0 0 1-4 4H9l-4 3V7a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4z" />
+          <path d="M9 10h6" />
+          <path d="M9 14h4" />
+        </svg>
+        <span className="whitespace-nowrap max-w-0 overflow-hidden opacity-0 transition-all duration-200 group-hover:max-w-xs group-hover:opacity-100 group-focus-within:max-w-xs group-focus-within:opacity-100">
+          Submit a Prayer Request
+        </span>
       </button>
 
       <AnimatePresence>

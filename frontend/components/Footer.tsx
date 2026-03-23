@@ -10,16 +10,16 @@ export default function Footer() {
       whileInView={{ opacity: 1 }}
       viewport={{ once: true }}
       transition={{ duration: 0.8 }}
-      className="mt-20 border-t border-primary-100 bg-white"
+      className="mt-6 border-t border-primary-100 bg-white"
     >
-      <div className="section-pad grid gap-8 py-12 md:grid-cols-3">
+      <div className="section-pad grid gap-8 pt-12 pb-24 sm:pb-12 md:grid-cols-3">
         <div>
           <h3 className="font-display text-2xl text-primary-900">EUREKA</h3>
           <p className="mt-3 text-sm text-slate-600">
             Discovering the strength, purpose, and calling God has placed in women through community, prayer, and fellowship.
           </p>
         </div>
-        <div>
+        <div className="w-full text-left md:mx-auto">
           <h4 className="text-sm font-semibold uppercase tracking-wide text-primary-800">Quick Links</h4>
           <div className="mt-4 grid gap-2 text-sm text-slate-600">
             <Link href="/about">About</Link>

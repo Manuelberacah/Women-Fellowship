@@ -68,16 +68,20 @@ export default function EurekaWallPage() {
 
       <div className="mx-auto mt-12 grid max-w-5xl gap-6 md:grid-cols-3">
         {sampleMessages.map((msg) => (
-          <motion.div
+          <motion.button
             key={msg}
+            type="button"
+            onClick={() => setMessage(msg)}
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-            className="rounded-3xl bg-white p-6 shadow-card"
+            className={`rounded-3xl p-6 text-left shadow-card transition hover:-translate-y-1 hover:shadow-lg hover:bg-primary-50 ${
+              message === msg ? "bg-primary-700 text-white" : "bg-white"
+            }`}
           >
-            <p className="text-sm text-slate-600">{msg}</p>
-          </motion.div>
+            <p className={`text-sm ${message === msg ? "text-white" : "text-slate-600"}`}>{msg}</p>
+          </motion.button>
         ))}
       </div>
     </section>

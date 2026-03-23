@@ -183,7 +183,7 @@ export default function BecomeMemberPage() {
   return (
     <section className="section-pad py-20">
       <SectionHeader eyebrow="Membership" title="Become a Member">
-        Join the fellowship to access events, community updates, and your digital event passes.
+        Join the fellowship to access events and community updates.
       </SectionHeader>
 
       <div className="rounded-3xl bg-white p-8 shadow-card">

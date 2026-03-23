@@ -57,7 +57,7 @@ export default function ContactForm() {
         />
         {status && <p className="text-sm text-primary-700">{status}</p>}
         <button
-          className="inline-flex items-center gap-2 rounded-full bg-primary-700 px-6 py-3 text-sm font-semibold text-white"
+          className="inline-flex w-fit items-center gap-2 rounded-full bg-primary-700 px-6 py-3 text-sm font-semibold text-white"
           disabled={isSubmitting}
         >
           {isSubmitting ? <Spinner /> : null}

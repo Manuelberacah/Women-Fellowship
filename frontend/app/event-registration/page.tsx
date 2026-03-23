@@ -36,12 +36,19 @@ export default function EventRegistrationPage() {
       return;
     }
 
-    const order = await axios.post(`${API_BASE}/payments/order`, {
-      amount: 20000,
-      name: form.name,
-      email: form.email,
-      phone: form.phone
-    });
+    let order;
+    try {
+      order = await axios.post(`${API_BASE}/payments/order`, {
+        amount: 20000,
+        name: form.name,
+        email: form.email,
+        phone: form.phone
+      });
+    } catch {
+      setStatus("Unable to reach payment server. Please try again in a moment.");
+      setIsPaying(false);
+      return;
+    }
 
     const options = {
       key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
@@ -51,14 +58,19 @@ export default function EventRegistrationPage() {
       description: "Event Registration",
       order_id: order.data.id,
       handler: async (response: any) => {
-        await axios.post(`${API_BASE}/payments/verify`, {
-          orderId: order.data.id,
-          paymentId: response.razorpay_payment_id,
-          signature: response.razorpay_signature,
-          attendee: form
-        });
-        setStatus("Payment successful! Your digital event pass is ready in your dashboard.");
-        setIsPaying(false);
+        try {
+          await axios.post(`${API_BASE}/payments/verify`, {
+            orderId: order.data.id,
+            paymentId: response.razorpay_payment_id,
+            signature: response.razorpay_signature,
+            attendee: form
+          });
+          setStatus("Payment successful! Your digital event pass is ready in your dashboard.");
+        } catch {
+          setStatus("Payment captured but verification failed. Please contact support.");
+        } finally {
+          setIsPaying(false);
+        }
       },
       prefill: {
         name: form.name,

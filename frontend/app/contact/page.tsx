@@ -12,7 +12,12 @@ export default function ContactPage() {
           <h3 className="font-display text-2xl text-primary-900">Eureka Fellowship Office</h3>
           <p className="mt-4 text-sm text-slate-600">Email: manuelberacah.gospel@gmail.com</p>
           <p className="mt-2 text-sm text-slate-600">Phone: 8015300905, 8125414142</p>
-          <p className="mt-2 text-sm text-slate-600">Address: Visakhapatnam</p>
+          <p className="mt-2 text-sm text-slate-600">Conducted by: Church of Christ, Madhurawada</p>
+          <p className="mt-2 text-sm text-slate-600">
+            Address: 24-32/1, Swatantra Nagar<br />
+            Madhurawada, Visakhapatnam<br />
+            Andhra Pradesh - 530048
+          </p>
         </div>
         <ContactForm />
       </div>

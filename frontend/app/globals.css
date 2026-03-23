@@ -16,6 +16,18 @@ body {
   @apply bg-soft-white text-slate-900 font-body;
 }
 
+@layer base {
+  button,
+  a {
+    @apply transition-all duration-200;
+  }
+
+  button:hover,
+  a:hover {
+    @apply brightness-110;
+  }
+}
+
 .section-pad {
   @apply px-6 sm:px-10 lg:px-16;
 }

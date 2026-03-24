@@ -4,7 +4,7 @@ const crypto = require("crypto");
 const Registration = require("../models/Registration");
 const Event = require("../models/Event");
 const { generatePassQr } = require("../utils/passService");
-const { sendNotification } = require("../utils/emailService");
+const { sendNotification, sendEventConfirmation } = require("../utils/emailService");
 
 const router = express.Router();
 
@@ -74,6 +74,10 @@ router.post("/verify", async (req, res) => {
       subject: "Event Registration Payment Success",
       text: `Event: ${event.name}\nName: ${attendee.name}\nPhone: ${attendee.phone}\nEmail: ${attendee.email}\nAmount: ₹200\nPaymentId: ${paymentId}`
     }).catch(() => null);
+
+    if (attendee.email) {
+      sendEventConfirmation(attendee.email, attendee.name, event.name, event.date).catch(() => null);
+    }
 
     res.json({ message: "Payment verified", registration });
   } catch (error) {

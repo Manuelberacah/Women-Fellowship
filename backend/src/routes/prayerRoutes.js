@@ -15,9 +15,14 @@ router.post("/", async (req, res) => {
   res.json({ prayer });
 });
 
-router.get("/", auth, admin, async (_, res) => {
-  const prayers = await PrayerRequest.find().sort({ createdAt: -1 });
-  res.json({ prayers });
+router.get("/", auth, admin, async (req, res) => {
+  const skip = Number(req.query.skip || 0);
+  const limit = Number(req.query.limit || 10);
+  const [prayers, total] = await Promise.all([
+    PrayerRequest.find().sort({ createdAt: -1 }).skip(skip).limit(limit),
+    PrayerRequest.countDocuments()
+  ]);
+  res.json({ prayers, total });
 });
 
 router.patch("/:id", auth, admin, async (req, res) => {

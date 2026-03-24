@@ -1,9 +1,10 @@
+const crypto = require("crypto");
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const { sendOtp, verifyOtp } = require("../utils/otpService");
-const { sendNotification } = require("../utils/emailService");
+const { sendNotification, sendVerificationEmail } = require("../utils/emailService");
 const auth = require("../middleware/auth");
 const admin = require("../middleware/admin");
 
@@ -19,6 +20,14 @@ router.post("/register", async (req, res) => {
     if (existing) return res.status(400).json({ message: "User already exists" });
 
     const passwordHash = password ? await bcrypt.hash(password, 10) : undefined;
+
+    let emailVerifyToken;
+    let emailVerifyExpires;
+    if (mode !== "phone" && email) {
+      emailVerifyToken = crypto.randomBytes(32).toString("hex");
+      emailVerifyExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    }
+
     const user = await User.create({
       name,
       phone,
@@ -26,8 +35,17 @@ router.post("/register", async (req, res) => {
       churchName,
       city,
       passwordHash,
-      phoneVerified: mode === "phone" ? Boolean(phoneVerified) : true
+      phoneVerified: mode === "phone" ? Boolean(phoneVerified) : false,
+      emailVerified: false,
+      emailVerifyToken,
+      emailVerifyExpires
     });
+
+    if (mode !== "phone" && email && emailVerifyToken) {
+      const frontendUrl = (process.env.FRONTEND_URL || "http://localhost:3000").split(",")[0].trim();
+      const verifyUrl = `${frontendUrl}/verify-email?token=${emailVerifyToken}`;
+      sendVerificationEmail(email, name, verifyUrl).catch(() => null);
+    }
 
     sendNotification({
       subject: "New Member Signup",
@@ -122,9 +140,50 @@ router.post("/verify-msg91", async (req, res) => {
   }
 });
 
-router.get("/users", auth, admin, async (_, res) => {
-  const users = await User.find().sort({ createdAt: -1 });
-  res.json({ users });
+router.get("/verify-email", async (req, res) => {
+  const { token } = req.query;
+  if (!token) return res.status(400).json({ message: "Token required" });
+
+  const user = await User.findOne({ emailVerifyToken: token });
+  if (!user) return res.status(400).json({ message: "Invalid or expired token" });
+  if (user.emailVerifyExpires < new Date()) return res.status(400).json({ message: "Token has expired. Please request a new verification email." });
+
+  user.emailVerified = true;
+  user.emailVerifyToken = undefined;
+  user.emailVerifyExpires = undefined;
+  await user.save();
+
+  res.json({ message: "Email verified successfully" });
+});
+
+router.post("/resend-verification", async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ message: "Email required" });
+
+  const user = await User.findOne({ email });
+  if (!user) return res.status(400).json({ message: "No account found with this email" });
+  if (user.emailVerified) return res.status(400).json({ message: "Email is already verified" });
+
+  const emailVerifyToken = crypto.randomBytes(32).toString("hex");
+  user.emailVerifyToken = emailVerifyToken;
+  user.emailVerifyExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  await user.save();
+
+  const frontendUrl = (process.env.FRONTEND_URL || "http://localhost:3000").split(",")[0].trim();
+  const verifyUrl = `${frontendUrl}/verify-email?token=${emailVerifyToken}`;
+  sendVerificationEmail(email, user.name, verifyUrl).catch(() => null);
+
+  res.json({ message: "Verification email sent" });
+});
+
+router.get("/users", auth, admin, async (req, res) => {
+  const skip = Number(req.query.skip || 0);
+  const limit = Number(req.query.limit || 10);
+  const [users, total] = await Promise.all([
+    User.find().sort({ createdAt: -1 }).skip(skip).limit(limit),
+    User.countDocuments()
+  ]);
+  res.json({ users, total });
 });
 
 module.exports = router;

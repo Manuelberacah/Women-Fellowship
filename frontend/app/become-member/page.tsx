@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import SectionHeader from "../../components/SectionHeader";
-import { registerMember, verifyMsg91Widget } from "../../lib/api";
+import { registerMember, verifyMsg91Widget, resendVerificationEmail } from "../../lib/api";
 import Spinner from "../../components/Spinner";
 
 declare global {
@@ -20,6 +20,8 @@ export default function BecomeMemberPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [otpVerified, setOtpVerified] = useState(false);
   const [profileCreated, setProfileCreated] = useState(false);
+  const [awaitingVerification, setAwaitingVerification] = useState(false);
+  const [resending, setResending] = useState(false);
   const [scriptReady, setScriptReady] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
@@ -76,7 +78,11 @@ export default function BecomeMemberPage() {
       };
       await registerMember(payload);
       setProfileCreated(true);
-      setMessage("Registration successful. Welcome to Eureka!");
+      if (mode === "email") {
+        setAwaitingVerification(true);
+      } else {
+        setMessage("Registration successful. Welcome to Eureka!");
+      }
     } catch (error) {
       setMessage("Unable to register at the moment. Please try again.");
     } finally {
@@ -180,13 +186,48 @@ export default function BecomeMemberPage() {
     }
   };
 
+  const handleResend = async () => {
+    if (!form.email) return;
+    setResending(true);
+    try {
+      await resendVerificationEmail(form.email);
+      setMessage("Verification email resent. Please check your inbox.");
+    } catch {
+      setMessage("Unable to resend. Please try again.");
+    } finally {
+      setResending(false);
+    }
+  };
+
+  if (awaitingVerification) {
+    return (
+      <section className="section-pad py-20">
+        <SectionHeader eyebrow="Membership" title="Check Your Email">
+          We sent a verification link to <strong>{form.email}</strong>. Click the link to complete your membership.
+        </SectionHeader>
+        <div className="mt-8 rounded-3xl bg-white p-8 shadow-card text-center">
+          <p className="text-slate-600 text-sm">Didn&apos;t receive the email? Check your spam folder or resend below.</p>
+          {message && <p className="mt-3 text-sm text-primary-700">{message}</p>}
+          <button
+            onClick={handleResend}
+            disabled={resending}
+            className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary-700 px-6 py-3 text-sm font-semibold text-white disabled:opacity-60"
+          >
+            {resending ? <Spinner /> : null}
+            Resend Verification Email
+          </button>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="section-pad py-20">
       <SectionHeader eyebrow="Membership" title="Become a Member">
         Join the fellowship to access events and community updates.
       </SectionHeader>
 
-      <div className="rounded-3xl bg-white p-8 shadow-card">
+      <div className="rounded-3xl bg-white p-5 shadow-card sm:p-8">
         <div className="flex gap-4">
           <button
             onClick={() => setMode("email")}

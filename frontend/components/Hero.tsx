@@ -44,8 +44,8 @@ export default function Hero() {
               </Link>
             </div>
           </div>
-          <div className="hidden items-center justify-end lg:flex">
-            <div className="glass w-full max-w-md rounded-3xl p-8 text-slate-900 shadow-card">
+          <div className="flex items-center justify-center lg:justify-end">
+            <div className="glass w-full max-w-md rounded-3xl p-6 text-slate-900 shadow-card lg:p-8">
               <h3 className="font-display text-2xl text-primary-900">Next Fellowship Gathering</h3>
               <p className="mt-2 text-sm text-slate-600">Topic: Women’s Part in the Church</p>
               <div className="mt-6 text-3xl font-semibold text-primary-800">May Gathering</div>

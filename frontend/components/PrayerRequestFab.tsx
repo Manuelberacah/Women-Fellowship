@@ -33,7 +33,7 @@ export default function PrayerRequestFab() {
       <button
         onClick={() => setOpen(true)}
         aria-label="Submit a Prayer Request"
-        className="group fixed bottom-24 right-6 z-50 inline-flex h-12 w-12 aspect-square items-center justify-center gap-0 rounded-full bg-primary-700 p-0 text-sm font-semibold text-white shadow-glow transition-all duration-200 group-hover:w-auto group-hover:px-4 group-hover:gap-3 group-focus-within:w-auto group-focus-within:px-4 group-focus-within:gap-3 sm:bottom-6"
+        className="group fixed bottom-6 right-6 z-50 inline-flex h-12 w-12 aspect-square items-center justify-center gap-0 rounded-full bg-primary-700 p-0 text-sm font-semibold text-white shadow-glow transition-all duration-200 group-hover:w-auto group-hover:px-4 group-hover:gap-3 group-focus-within:w-auto group-focus-within:px-4 group-focus-within:gap-3"
       >
         <svg
           aria-hidden="true"

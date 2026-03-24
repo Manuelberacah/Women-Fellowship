@@ -90,7 +90,7 @@ export default function EventRegistrationPage() {
         The event registration fee is ₹200. Complete payment to generate your digital event pass.
       </SectionHeader>
 
-      <div className="rounded-3xl bg-white p-8 shadow-card">
+      <div className="rounded-3xl bg-white p-5 shadow-card sm:p-8">
         <div className="grid gap-4 md:grid-cols-2">
           <input
             value={form.name}

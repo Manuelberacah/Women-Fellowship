@@ -20,9 +20,19 @@ router.post("/", async (req, res) => {
   }
 });
 
-router.get("/", auth, admin, async (_, res) => {
-  const contacts = await ContactMessage.find().sort({ createdAt: -1 });
-  res.json({ contacts });
+router.get("/", auth, admin, async (req, res) => {
+  const skip = Number(req.query.skip || 0);
+  const limit = Number(req.query.limit || 10);
+  const [contacts, total] = await Promise.all([
+    ContactMessage.find().sort({ createdAt: -1 }).skip(skip).limit(limit),
+    ContactMessage.countDocuments()
+  ]);
+  res.json({ contacts, total });
+});
+
+router.patch("/:id/read", auth, admin, async (req, res) => {
+  const contact = await ContactMessage.findByIdAndUpdate(req.params.id, { read: true }, { new: true });
+  res.json({ contact });
 });
 
 module.exports = router;

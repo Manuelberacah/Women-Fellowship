@@ -25,6 +25,11 @@ router.get("/pending", auth, admin, async (_, res) => {
   res.json({ posts });
 });
 
+router.get("/all", auth, admin, async (_, res) => {
+  const posts = await WallPost.find().sort({ createdAt: -1 });
+  res.json({ posts });
+});
+
 router.patch("/:id", auth, admin, async (req, res) => {
   const post = await WallPost.findByIdAndUpdate(req.params.id, req.body, { new: true });
   if (req.body.approved === true && post) {

@@ -4,18 +4,22 @@ import { useEffect, useMemo, useState } from "react";
 import SectionHeader from "../../components/SectionHeader";
 import {
   approveWallPost,
-  declineWallPost,
+  unapproveWallPost,
+  deleteWallPost,
   fetchContactMessages,
   fetchGalleryImages,
   fetchMembers,
   fetchPrayerRequests,
   fetchRegistrations,
-  fetchWallPending,
+  fetchWallAll,
   adminLogin,
-  uploadGalleryImage
+  uploadGalleryImage,
+  markPrayerPrayed,
+  markContactRead
 } from "../../lib/api";
 
 const STORAGE_KEY = "eureka_admin_token";
+const PAGE_SIZE = 10;
 
 export default function AdminPage() {
   const [token, setToken] = useState<string | null>(null);
@@ -25,10 +29,18 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
 
   const [members, setMembers] = useState<any[]>([]);
+  const [membersTotal, setMembersTotal] = useState(0);
+
   const [prayers, setPrayers] = useState<any[]>([]);
+  const [prayersTotal, setPrayersTotal] = useState(0);
+
   const [contacts, setContacts] = useState<any[]>([]);
+  const [contactsTotal, setContactsTotal] = useState(0);
+
   const [registrations, setRegistrations] = useState<any[]>([]);
-  const [wallPending, setWallPending] = useState<any[]>([]);
+  const [registrationsTotal, setRegistrationsTotal] = useState(0);
+
+  const [wallPosts, setWallPosts] = useState<any[]>([]);
   const [gallery, setGallery] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
 
@@ -48,19 +60,23 @@ export default function AdminPage() {
     setLoading(true);
     setError(null);
     try {
-      const [membersData, prayerData, contactData, regData, pendingData, galleryData] = await Promise.all([
-        fetchMembers(authToken),
-        fetchPrayerRequests(authToken),
-        fetchContactMessages(authToken),
-        fetchRegistrations(authToken),
-        fetchWallPending(authToken),
+      const [membersRes, prayerRes, contactRes, regRes, allWallData, galleryData] = await Promise.all([
+        fetchMembers(authToken, 0, PAGE_SIZE),
+        fetchPrayerRequests(authToken, 0, PAGE_SIZE),
+        fetchContactMessages(authToken, 0, PAGE_SIZE),
+        fetchRegistrations(authToken, 0, PAGE_SIZE),
+        fetchWallAll(authToken),
         fetchGalleryImages()
       ]);
-      setMembers(membersData);
-      setPrayers(prayerData);
-      setContacts(contactData);
-      setRegistrations(regData);
-      setWallPending(pendingData);
+      setMembers(membersRes.items);
+      setMembersTotal(membersRes.total);
+      setPrayers(prayerRes.items);
+      setPrayersTotal(prayerRes.total);
+      setContacts(contactRes.items);
+      setContactsTotal(contactRes.total);
+      setRegistrations(regRes.items);
+      setRegistrationsTotal(regRes.total);
+      setWallPosts(allWallData);
       setGallery(galleryData);
     } catch {
       setError("Unable to load admin data. Please check your login.");
@@ -82,18 +98,69 @@ export default function AdminPage() {
     }
   };
 
+  // --- Wall post actions ---
   const handleApprove = async (id: string) => {
     if (!token) return;
     await approveWallPost(token, id);
-    setWallPending((prev) => prev.filter((item) => item._id !== id));
+    setWallPosts((prev) => prev.map((item) => item._id === id ? { ...item, approved: true } : item));
   };
 
-  const handleDecline = async (id: string) => {
+  const handleUnapprove = async (id: string) => {
     if (!token) return;
-    await declineWallPost(token, id);
-    setWallPending((prev) => prev.filter((item) => item._id !== id));
+    await unapproveWallPost(token, id);
+    setWallPosts((prev) => prev.map((item) => item._id === id ? { ...item, approved: false } : item));
   };
 
+  const handleDelete = async (id: string) => {
+    if (!token) return;
+    await deleteWallPost(token, id);
+    setWallPosts((prev) => prev.filter((item) => item._id !== id));
+  };
+
+  // --- Prayer actions ---
+  const handleMarkPrayed = async (id: string) => {
+    if (!token) return;
+    await markPrayerPrayed(token, id);
+    setPrayers((prev) => prev.map((p) => p._id === id ? { ...p, status: "prayed" } : p));
+  };
+
+  // --- Contact actions ---
+  const handleMarkRead = async (id: string) => {
+    if (!token) return;
+    await markContactRead(token, id);
+    setContacts((prev) => prev.map((c) => c._id === id ? { ...c, read: true } : c));
+  };
+
+  // --- Load More ---
+  const loadMoreMembers = async () => {
+    if (!token) return;
+    const res = await fetchMembers(token, members.length, PAGE_SIZE);
+    setMembers((prev) => [...prev, ...res.items]);
+    setMembersTotal(res.total);
+  };
+
+  const loadMorePrayers = async () => {
+    if (!token) return;
+    const res = await fetchPrayerRequests(token, prayers.length, PAGE_SIZE);
+    setPrayers((prev) => [...prev, ...res.items]);
+    setPrayersTotal(res.total);
+  };
+
+  const loadMoreContacts = async () => {
+    if (!token) return;
+    const res = await fetchContactMessages(token, contacts.length, PAGE_SIZE);
+    setContacts((prev) => [...prev, ...res.items]);
+    setContactsTotal(res.total);
+  };
+
+  const loadMoreRegistrations = async () => {
+    if (!token) return;
+    const res = await fetchRegistrations(token, registrations.length, PAGE_SIZE);
+    setRegistrations((prev) => [...prev, ...res.items]);
+    setRegistrationsTotal(res.total);
+  };
+
+  // --- Gallery ---
   const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!token) return;
     const file = event.target.files?.[0];
@@ -109,15 +176,19 @@ export default function AdminPage() {
     }
   };
 
+  const unreadContacts = contacts.filter((c) => !c.read).length;
+  const pendingPrayers = prayers.filter((p) => p.status !== "prayed").length;
+
   const stats = useMemo(
     () => [
-      { label: "Members", value: members.length },
-      { label: "Prayer Requests", value: prayers.length },
-      { label: "Contact Messages", value: contacts.length },
-      { label: "Event Registrations", value: registrations.length },
-      { label: "Pending Wall Posts", value: wallPending.length }
+      { label: "Members", value: membersTotal },
+      { label: "Prayer Requests", value: prayersTotal },
+      { label: "Pending Prayers", value: pendingPrayers },
+      { label: "Unread Messages", value: unreadContacts },
+      { label: "Event Registrations", value: registrationsTotal },
+      { label: "Wall Posts", value: wallPosts.length }
     ],
-    [members.length, prayers.length, contacts.length, registrations.length, wallPending.length]
+    [membersTotal, prayersTotal, pendingPrayers, unreadContacts, registrationsTotal, wallPosts.length]
   );
 
   if (!token) {
@@ -126,7 +197,7 @@ export default function AdminPage() {
         <SectionHeader eyebrow="Admin" title="Admin Portal">
           Log in with an admin account to view all submissions and approvals.
         </SectionHeader>
-        <form onSubmit={handleLogin} className="max-w-md rounded-3xl bg-white p-8 shadow-card">
+        <form onSubmit={handleLogin} className="w-full max-w-md rounded-3xl bg-white p-6 shadow-card sm:p-8">
           <label className="text-sm font-semibold text-slate-700">Email</label>
           <input
             value={email}
@@ -164,36 +235,43 @@ export default function AdminPage() {
       {error && <p className="mb-4 text-sm text-primary-700">{error}</p>}
       {loading && <p className="mb-4 text-sm text-slate-500">Loading data...</p>}
 
-      <div className="grid gap-4 md:grid-cols-3">
+      {/* Stats */}
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
         {stats.map((stat) => (
           <div key={stat.label} className="rounded-3xl bg-white p-5 shadow-card">
             <div className="text-2xl font-semibold text-primary-800">{stat.value}</div>
-            <div className="mt-1 text-sm text-slate-600">{stat.label}</div>
+            <div className="mt-1 text-xs text-slate-600">{stat.label}</div>
           </div>
         ))}
       </div>
 
+      {/* Wall Posts + Gallery */}
       <div className="mt-10 grid gap-8 lg:grid-cols-2">
         <div className="rounded-3xl bg-white p-6 shadow-card">
-          <h3 className="font-display text-xl text-primary-900">Pending Eureka Wall Posts</h3>
+          <h3 className="font-display text-xl text-primary-900">Eureka Wall Posts</h3>
           <div className="mt-4 grid gap-4">
-            {wallPending.length === 0 && <p className="text-sm text-slate-500">No pending posts.</p>}
-            {wallPending.map((post) => (
+            {wallPosts.length === 0 && <p className="text-sm text-slate-500">No posts yet.</p>}
+            {wallPosts.map((post) => (
               <div key={post._id} className="rounded-2xl border border-slate-100 p-4">
-                <p className="text-sm text-slate-700">{post.message}</p>
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm text-slate-700">{post.message}</p>
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${post.approved ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
+                    {post.approved ? "Live" : "Pending"}
+                  </span>
+                </div>
                 <p className="mt-2 text-xs font-semibold uppercase text-primary-700">{post.name}</p>
                 <div className="mt-3 flex gap-2">
-                  <button
-                    onClick={() => handleApprove(post._id)}
-                    className="rounded-full bg-primary-700 px-4 py-2 text-xs font-semibold text-white"
-                  >
-                    Approve
-                  </button>
-                  <button
-                    onClick={() => handleDecline(post._id)}
-                    className="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700"
-                  >
-                    Decline
+                  {!post.approved ? (
+                    <button onClick={() => handleApprove(post._id)} className="rounded-full bg-primary-700 px-4 py-2 text-xs font-semibold text-white">
+                      Approve
+                    </button>
+                  ) : (
+                    <button onClick={() => handleUnapprove(post._id)} className="rounded-full border border-amber-300 bg-amber-50 px-4 py-2 text-xs font-semibold text-amber-700">
+                      Remove from Wall
+                    </button>
+                  )}
+                  <button onClick={() => handleDelete(post._id)} className="rounded-full border border-red-200 px-4 py-2 text-xs font-semibold text-red-600">
+                    Delete
                   </button>
                 </div>
               </div>
@@ -204,13 +282,7 @@ export default function AdminPage() {
         <div className="rounded-3xl bg-white p-6 shadow-card">
           <h3 className="font-display text-xl text-primary-900">Gallery Uploads</h3>
           <p className="mt-2 text-sm text-slate-600">Upload new photos to appear in the gallery.</p>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleUpload}
-            disabled={uploading}
-            className="mt-4 w-full text-sm text-slate-600"
-          />
+          <input type="file" accept="image/*" onChange={handleUpload} disabled={uploading} className="mt-4 w-full text-sm text-slate-600" />
           {uploading && <p className="mt-2 text-sm text-slate-500">Uploading...</p>}
           <div className="mt-4 grid grid-cols-3 gap-3">
             {gallery.slice(0, 6).map((img) => (
@@ -220,62 +292,111 @@ export default function AdminPage() {
         </div>
       </div>
 
+      {/* Members + Prayer Requests */}
       <div className="mt-10 grid gap-8 lg:grid-cols-2">
         <div className="rounded-3xl bg-white p-6 shadow-card">
           <h3 className="font-display text-xl text-primary-900">Members</h3>
           <div className="mt-4 grid gap-3 text-sm text-slate-600">
-            {members.slice(0, 10).map((member) => (
+            {members.length === 0 && <p>No members yet.</p>}
+            {members.map((member) => (
               <div key={member._id} className="flex flex-col border-b border-slate-100 pb-3">
                 <span className="font-semibold text-slate-800">{member.name}</span>
                 <span>{member.email || member.phone || "-"}</span>
                 <span>{member.city}</span>
               </div>
             ))}
-            {members.length === 0 && <p>No members yet.</p>}
           </div>
+          {members.length < membersTotal && (
+            <button onClick={loadMoreMembers} className="mt-4 text-sm font-semibold text-primary-700">
+              Load more ({membersTotal - members.length} remaining)
+            </button>
+          )}
         </div>
 
         <div className="rounded-3xl bg-white p-6 shadow-card">
           <h3 className="font-display text-xl text-primary-900">Prayer Requests</h3>
           <div className="mt-4 grid gap-3 text-sm text-slate-600">
-            {prayers.slice(0, 10).map((prayer) => (
+            {prayers.length === 0 && <p>No prayer requests yet.</p>}
+            {prayers.map((prayer) => (
               <div key={prayer._id} className="border-b border-slate-100 pb-3">
-                <span className="font-semibold text-slate-800">{prayer.name}</span>
+                <div className="flex items-start justify-between gap-2">
+                  <span className="font-semibold text-slate-800">{prayer.name}</span>
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${prayer.status === "prayed" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
+                    {prayer.status === "prayed" ? "Prayed For" : "Pending"}
+                  </span>
+                </div>
                 <p className="mt-1">{prayer.request}</p>
+                {prayer.status !== "prayed" && (
+                  <button onClick={() => handleMarkPrayed(prayer._id)} className="mt-2 rounded-full bg-primary-700 px-3 py-1 text-xs font-semibold text-white">
+                    Mark as Prayed For
+                  </button>
+                )}
               </div>
             ))}
-            {prayers.length === 0 && <p>No prayer requests yet.</p>}
           </div>
+          {prayers.length < prayersTotal && (
+            <button onClick={loadMorePrayers} className="mt-4 text-sm font-semibold text-primary-700">
+              Load more ({prayersTotal - prayers.length} remaining)
+            </button>
+          )}
         </div>
       </div>
 
+      {/* Contact Messages + Event Registrations */}
       <div className="mt-10 grid gap-8 lg:grid-cols-2">
         <div className="rounded-3xl bg-white p-6 shadow-card">
-          <h3 className="font-display text-xl text-primary-900">Contact Messages</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="font-display text-xl text-primary-900">Contact Messages</h3>
+            {unreadContacts > 0 && (
+              <span className="rounded-full bg-primary-700 px-2.5 py-0.5 text-xs font-semibold text-white">
+                {unreadContacts} unread
+              </span>
+            )}
+          </div>
           <div className="mt-4 grid gap-3 text-sm text-slate-600">
-            {contacts.slice(0, 10).map((contact) => (
-              <div key={contact._id} className="border-b border-slate-100 pb-3">
-                <span className="font-semibold text-slate-800">{contact.name}</span>
-                <span className="block">{contact.email}</span>
-                <p className="mt-1">{contact.message}</p>
+            {contacts.length === 0 && <p>No contact messages yet.</p>}
+            {contacts.map((contact) => (
+              <div key={contact._id} className={`border-b border-slate-100 pb-3 ${!contact.read ? "opacity-100" : "opacity-60"}`}>
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <span className="font-semibold text-slate-800">{contact.name}</span>
+                    {!contact.read && <span className="ml-2 rounded-full bg-primary-100 px-1.5 py-0.5 text-xs font-semibold text-primary-700">New</span>}
+                    <span className="block">{contact.email}</span>
+                    <p className="mt-1">{contact.message}</p>
+                  </div>
+                </div>
+                {!contact.read && (
+                  <button onClick={() => handleMarkRead(contact._id)} className="mt-2 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700">
+                    Mark as Read
+                  </button>
+                )}
               </div>
             ))}
-            {contacts.length === 0 && <p>No contact messages yet.</p>}
           </div>
+          {contacts.length < contactsTotal && (
+            <button onClick={loadMoreContacts} className="mt-4 text-sm font-semibold text-primary-700">
+              Load more ({contactsTotal - contacts.length} remaining)
+            </button>
+          )}
         </div>
 
         <div className="rounded-3xl bg-white p-6 shadow-card">
           <h3 className="font-display text-xl text-primary-900">Event Registrations</h3>
           <div className="mt-4 grid gap-3 text-sm text-slate-600">
-            {registrations.slice(0, 10).map((reg) => (
+            {registrations.length === 0 && <p>No registrations yet.</p>}
+            {registrations.map((reg) => (
               <div key={reg._id} className="border-b border-slate-100 pb-3">
                 <span className="font-semibold text-slate-800">{reg.attendeeName}</span>
                 <span className="block">{reg.attendeeEmail || reg.attendeePhone}</span>
                 <span className="block text-xs text-slate-500">{reg.event?.name || "Event"}</span>
               </div>
             ))}
-            {registrations.length === 0 && <p>No registrations yet.</p>}
           </div>
+          {registrations.length < registrationsTotal && (
+            <button onClick={loadMoreRegistrations} className="mt-4 text-sm font-semibold text-primary-700">
+              Load more ({registrationsTotal - registrations.length} remaining)
+            </button>
+          )}
         </div>
       </div>
     </section>

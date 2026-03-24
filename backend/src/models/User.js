@@ -10,7 +10,9 @@ const userSchema = new mongoose.Schema(
     passwordHash: { type: String },
     role: { type: String, enum: ["member", "admin"], default: "member" },
     phoneVerified: { type: Boolean, default: false },
-    emailVerified: { type: Boolean, default: false }
+    emailVerified: { type: Boolean, default: false },
+    emailVerifyToken: { type: String },
+    emailVerifyExpires: { type: Date }
   },
   { timestamps: true }
 );

@@ -27,8 +27,8 @@ export default function CountdownTimer({ targetDate }: { targetDate: string }) {
     return (
       <div className="flex flex-wrap items-center gap-4 text-center">
         {["Days", "Hours", "Minutes", "Seconds"].map((label) => (
-          <div key={label} className="flex h-24 w-24 flex-col items-center justify-center rounded-2xl bg-white px-6 py-4 shadow-card">
-            <div className="text-3xl font-semibold leading-none text-primary-800 tabular-nums">00</div>
+          <div key={label} className="flex h-20 w-20 flex-col items-center justify-center rounded-2xl bg-white px-4 py-3 shadow-card sm:h-24 sm:w-24 sm:px-6 sm:py-4">
+            <div className="text-2xl font-semibold leading-none text-primary-800 tabular-nums sm:text-3xl">00</div>
             <div className="text-xs uppercase tracking-wide text-slate-500">{label}</div>
           </div>
         ))}
@@ -44,8 +44,8 @@ export default function CountdownTimer({ targetDate }: { targetDate: string }) {
         { label: "Minutes", value: timeLeft.minutes },
         { label: "Seconds", value: timeLeft.seconds }
       ].map((item) => (
-        <div key={item.label} className="flex h-24 w-24 flex-col items-center justify-center rounded-2xl bg-white px-6 py-4 shadow-card">
-          <div className="text-3xl font-semibold leading-none text-primary-800 tabular-nums">
+        <div key={item.label} className="flex h-20 w-20 flex-col items-center justify-center rounded-2xl bg-white px-4 py-3 shadow-card sm:h-24 sm:w-24 sm:px-6 sm:py-4">
+          <div className="text-2xl font-semibold leading-none text-primary-800 tabular-nums sm:text-3xl">
             {String(item.value).padStart(2, "0")}
           </div>
           <div className="text-xs uppercase tracking-wide text-slate-500">{item.label}</div>

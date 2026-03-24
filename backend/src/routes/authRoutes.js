@@ -1,5 +1,15 @@
 const crypto = require("crypto");
 const express = require("express");
+
+// APP_URL is used specifically for building email links.
+// FRONTEND_URL may be set to "*" for CORS which would break email links.
+function getAppUrl() {
+  const appUrl = process.env.APP_URL;
+  if (appUrl) return appUrl.trim().replace(/\/$/, "");
+  const frontendUrl = process.env.FRONTEND_URL || "";
+  const first = frontendUrl.split(",")[0].trim().replace(/\/$/, "");
+  return first && first !== "*" ? first : "http://localhost:3000";
+}
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
@@ -42,7 +52,7 @@ router.post("/register", async (req, res) => {
     });
 
     if (mode !== "phone" && email && emailVerifyToken) {
-      const frontendUrl = (process.env.FRONTEND_URL || "http://localhost:3000").split(",")[0].trim();
+      const frontendUrl = getAppUrl();
       const verifyUrl = `${frontendUrl}/verify-email?token=${emailVerifyToken}`;
       sendVerificationEmail(email, name, verifyUrl).catch(() => null);
     }
@@ -169,7 +179,7 @@ router.post("/resend-verification", async (req, res) => {
   user.emailVerifyExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
   await user.save();
 
-  const frontendUrl = (process.env.FRONTEND_URL || "http://localhost:3000").split(",")[0].trim();
+  const frontendUrl = getAppUrl();
   const verifyUrl = `${frontendUrl}/verify-email?token=${emailVerifyToken}`;
   sendVerificationEmail(email, user.name, verifyUrl).catch(() => null);
 
@@ -179,9 +189,10 @@ router.post("/resend-verification", async (req, res) => {
 router.get("/users", auth, admin, async (req, res) => {
   const skip = Number(req.query.skip || 0);
   const limit = Number(req.query.limit || 10);
+  const filter = { $or: [{ emailVerified: true }, { phoneVerified: true }] };
   const [users, total] = await Promise.all([
-    User.find().sort({ createdAt: -1 }).skip(skip).limit(limit),
-    User.countDocuments()
+    User.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+    User.countDocuments(filter)
   ]);
   res.json({ users, total });
 });

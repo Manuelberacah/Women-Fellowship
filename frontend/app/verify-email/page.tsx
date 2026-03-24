@@ -37,7 +37,10 @@ function VerifyEmailContent() {
       </SectionHeader>
 
       {status === "success" && (
-        <div className="mt-8 text-center">
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <a href="/" className="rounded-full border border-primary-200 px-6 py-3 text-sm font-semibold text-primary-700">
+            Back to Home
+          </a>
           <a href="/member" className="rounded-full bg-primary-700 px-6 py-3 text-sm font-semibold text-white">
             Go to Member Dashboard
           </a>
@@ -45,7 +48,10 @@ function VerifyEmailContent() {
       )}
 
       {status === "error" && (
-        <div className="mt-8 text-center">
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <a href="/" className="rounded-full border border-primary-200 px-6 py-3 text-sm font-semibold text-primary-700">
+            Back to Home
+          </a>
           <a href="/become-member" className="rounded-full bg-primary-700 px-6 py-3 text-sm font-semibold text-white">
             Back to Registration
           </a>

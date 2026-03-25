@@ -27,7 +27,7 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// ─── Brevo (free 300 emails/day, HTTP API, no SMTP port needed) ──────────────
+// ─── Brevo (free 300 emails/day, HTTP API) ───────────────────────────────────
 
 async function sendViaBrevo({ to, from, subject, html, text }) {
   const apiKey = process.env.BREVO_API_KEY;
@@ -72,49 +72,7 @@ async function sendViaBrevo({ to, from, subject, html, text }) {
   return false;
 }
 
-// ─── Resend (fallback) ───────────────────────────────────────────────────────
-
-async function sendViaResend({ to, from, subject, html, text }) {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) return false;
-
-  let attempt = 0;
-  while (attempt <= 2) {
-    try {
-      const response = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          from,
-          to: Array.isArray(to) ? to : [to],
-          subject,
-          html,
-          text
-        })
-      });
-
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(`Resend ${response.status}: ${JSON.stringify(err)}`);
-      }
-
-      const data = await response.json();
-      console.log(`[EMAIL OK] Resend | TO: ${Array.isArray(to) ? to[0] : to} | FROM: ${from} | SUBJECT: "${subject}" | ID: ${data.id}`);
-      return true;
-    } catch (error) {
-      console.error(`Resend attempt ${attempt + 1}/3 failed:`, error?.message || error);
-      if (attempt >= 2) break;
-      await sleep(1000 * Math.pow(2, attempt));
-    }
-    attempt += 1;
-  }
-  return false;
-}
-
-// ─── SMTP (local dev) ────────────────────────────────────────────────────────
+// ─── SMTP (local dev fallback) ───────────────────────────────────────────────
 
 async function sendViaSmtp({ to, from, subject, html, text }) {
   const mailer = getSmtpTransporter();
@@ -136,15 +94,18 @@ async function sendViaSmtp({ to, from, subject, html, text }) {
   return false;
 }
 
-// ─── Unified send: Brevo → SMTP → Resend ────────────────────────────────────
+// ─── Unified send: Brevo → SMTP ─────────────────────────────────────────────
 
 async function send({ to, subject, html, text }) {
-  const from = process.env.EMAIL_FROM || process.env.SMTP_USER || "Eureka Women Fellowship <onboarding@resend.dev>";
-  console.log(`[EMAIL SENDING] TO: ${to} | SUBJECT: "${subject}"`);
+  const from = process.env.EMAIL_FROM || process.env.SMTP_USER;
+  if (!from) {
+    console.error(`[EMAIL SKIPPED] EMAIL_FROM not set | TO: ${to} | SUBJECT: "${subject}"`);
+    return;
+  }
+  console.log(`[EMAIL SENDING] TO: ${to} | FROM: ${from} | SUBJECT: "${subject}"`);
 
   if (await sendViaBrevo({ to, from, subject, html, text })) return;
   if (await sendViaSmtp({ to, from, subject, html, text })) return;
-  if (await sendViaResend({ to, from, subject, html, text })) return;
 
   console.error(`[EMAIL FAILED] All transports failed | TO: ${to} | SUBJECT: "${subject}"`);
 }
@@ -154,7 +115,7 @@ async function send({ to, subject, html, text }) {
 async function sendNotification({ subject, text, html }) {
   const to = process.env.EMAIL_TO || process.env.SMTP_USER;
   if (!to) {
-    console.log("Email skipped: EMAIL_TO not set.");
+    console.log("[EMAIL SKIPPED] EMAIL_TO not set.");
     return;
   }
   await send({ to, subject, html, text });

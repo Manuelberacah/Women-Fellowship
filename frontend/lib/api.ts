@@ -17,16 +17,12 @@ export async function submitContactMessage(payload: { name: string; email: strin
 
 export async function fetchGalleryImages(): Promise<string[]> {
   try {
-    const [auto, uploaded] = await Promise.all([
-      axios.get(`/api/images`),
-      axios.get(`${API_BASE}/gallery`)
-    ]);
-    const autoImages = auto.data?.images || [];
-    const uploadedImages =
-      uploaded.data?.images?.map((img: any) =>
+    const response = await axios.get(`${API_BASE}/gallery`);
+    return (
+      response.data?.images?.map((img: any) =>
         img.imageUrl?.startsWith("/") ? `${API_ORIGIN}${img.imageUrl}` : img.imageUrl
-      ) || [];
-    return [...uploadedImages, ...autoImages];
+      ) || []
+    );
   } catch {
     return [];
   }

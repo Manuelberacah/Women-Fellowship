@@ -5,24 +5,24 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { fetchGalleryImages } from "../lib/api";
 
-const fallbackImages = [
-  "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?auto=format&fit=crop&w=900&q=80",
-  "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=900&q=80",
-  "https://images.unsplash.com/photo-1508973379184-7517410fb0bc?auto=format&fit=crop&w=900&q=80",
-  "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=900&q=80",
-  "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=900&q=80",
-  "https://images.unsplash.com/photo-1496307042754-b4aa456c4a2d?auto=format&fit=crop&w=900&q=80"
-];
-
 export default function GalleryGrid() {
-  const [images, setImages] = useState<string[]>(fallbackImages);
+  const [images, setImages] = useState<string[]>([]);
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchGalleryImages().then((data) => {
-      if (data.length > 0) setImages(data);
-    });
+    fetchGalleryImages()
+      .then(setImages)
+      .finally(() => setLoading(false));
   }, []);
+
+  if (loading) {
+    return <p className="text-center text-sm text-slate-500">Loading gallery...</p>;
+  }
+
+  if (images.length === 0) {
+    return <p className="text-center text-sm text-slate-500">No photos yet. Check back soon!</p>;
+  }
 
   return (
     <>

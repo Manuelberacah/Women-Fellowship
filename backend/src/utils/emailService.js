@@ -16,9 +16,9 @@ function getSmtpTransporter() {
     port,
     secure: port === 465,
     auth: { user, pass },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 15000
+    connectionTimeout: 8000,
+    greetingTimeout: 8000,
+    socketTimeout: 10000
   });
   return smtpTransporter;
 }
@@ -27,18 +27,43 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function sendViaSmtp({ to, from, subject, html, text }) {
-  const mailer = getSmtpTransporter();
-  if (!mailer) return false;
+// ─── Brevo (free 300 emails/day, HTTP API, no SMTP port needed) ──────────────
+
+async function sendViaBrevo({ to, from, subject, html, text }) {
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey) return false;
+
+  const fromEmail = from.includes("<") ? from.match(/<(.+)>/)?.[1] || from : from;
+  const fromName = from.includes("<") ? from.split("<")[0].trim() : "Eureka Women Fellowship";
 
   let attempt = 0;
   while (attempt <= 2) {
     try {
-      const info = await mailer.sendMail({ from, to, subject, text, html });
-      console.log(`Email sent via SMTP: ${info.messageId || "ok"}`);
+      const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          "api-key": apiKey,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          sender: { name: fromName, email: fromEmail },
+          to: [{ email: Array.isArray(to) ? to[0] : to }],
+          subject,
+          htmlContent: html || `<p>${text}</p>`,
+          textContent: text
+        })
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(`Brevo ${response.status}: ${JSON.stringify(err)}`);
+      }
+
+      const data = await response.json();
+      console.log(`Email sent via Brevo: ${data.messageId || "ok"}`);
       return true;
     } catch (error) {
-      console.error(`SMTP attempt ${attempt + 1}/3 failed:`, error?.message || error);
+      console.error(`Brevo attempt ${attempt + 1}/3 failed:`, error?.message || error);
       if (attempt >= 2) break;
       await sleep(1000 * Math.pow(2, attempt));
     }
@@ -46,6 +71,8 @@ async function sendViaSmtp({ to, from, subject, html, text }) {
   }
   return false;
 }
+
+// ─── Resend (fallback) ───────────────────────────────────────────────────────
 
 async function sendViaResend({ to, from, subject, html, text }) {
   const apiKey = process.env.RESEND_API_KEY;
@@ -87,17 +114,41 @@ async function sendViaResend({ to, from, subject, html, text }) {
   return false;
 }
 
-// Unified send — tries SMTP first, falls back to Resend
+// ─── SMTP (local dev) ────────────────────────────────────────────────────────
+
+async function sendViaSmtp({ to, from, subject, html, text }) {
+  const mailer = getSmtpTransporter();
+  if (!mailer) return false;
+
+  let attempt = 0;
+  while (attempt <= 2) {
+    try {
+      const info = await mailer.sendMail({ from, to, subject, text, html });
+      console.log(`Email sent via SMTP: ${info.messageId || "ok"}`);
+      return true;
+    } catch (error) {
+      console.error(`SMTP attempt ${attempt + 1}/3 failed:`, error?.message || error);
+      if (attempt >= 2) break;
+      await sleep(1000 * Math.pow(2, attempt));
+    }
+    attempt += 1;
+  }
+  return false;
+}
+
+// ─── Unified send: Brevo → SMTP → Resend ────────────────────────────────────
+
 async function send({ to, subject, html, text }) {
   const from = process.env.EMAIL_FROM || process.env.SMTP_USER || "Eureka Women Fellowship <onboarding@resend.dev>";
 
-  // Try SMTP first (Gmail App Password)
-  const smtpOk = await sendViaSmtp({ to, from, subject, html, text });
-  if (smtpOk) return;
+  // 1. Brevo (recommended for Render — free HTTP API)
+  if (await sendViaBrevo({ to, from, subject, html, text })) return;
 
-  // Fall back to Resend API
-  const resendOk = await sendViaResend({ to, from, subject, html, text });
-  if (resendOk) return;
+  // 2. SMTP (works locally / self-hosted)
+  if (await sendViaSmtp({ to, from, subject, html, text })) return;
+
+  // 3. Resend (needs verified domain for production)
+  if (await sendViaResend({ to, from, subject, html, text })) return;
 
   console.error("Email permanently failed via all transports.");
 }

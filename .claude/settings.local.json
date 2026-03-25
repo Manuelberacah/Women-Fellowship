@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm frontend/app/member-login/page.tsx)",
+      "Bash(rmdir frontend/app/member-login)"
+    ]
+  }
+}

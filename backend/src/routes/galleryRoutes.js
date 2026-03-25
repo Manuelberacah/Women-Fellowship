@@ -18,15 +18,25 @@ router.get("/", async (_, res) => {
 router.post("/", auth, admin, upload.single("image"), async (req, res) => {
   if (!req.file) return res.status(400).json({ message: "Image required" });
 
-  const filename = `gallery_${Date.now()}.jpg`;
-  const outputPath = path.join(__dirname, "..", "..", "uploads", filename);
+  try {
+    const uploadsDir = path.join(__dirname, "..", "..", "uploads");
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
 
-  await sharp(req.file.buffer).resize(1400).jpeg({ quality: 80 }).toFile(outputPath);
+    const filename = `gallery_${Date.now()}.jpg`;
+    const outputPath = path.join(uploadsDir, filename);
 
-  const imageUrl = `/uploads/${filename}`;
-  const image = await GalleryImage.create({ imageUrl, title: req.body.title || "" });
+    await sharp(req.file.buffer).resize(1400).jpeg({ quality: 80 }).toFile(outputPath);
 
-  res.json({ image });
+    const imageUrl = `/uploads/${filename}`;
+    const image = await GalleryImage.create({ imageUrl, title: req.body.title || "" });
+
+    res.json({ image });
+  } catch (error) {
+    console.error("Gallery upload failed:", error?.message || error);
+    res.status(500).json({ message: "Image upload failed" });
+  }
 });
 
 module.exports = router;

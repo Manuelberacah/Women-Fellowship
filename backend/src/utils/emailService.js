@@ -7,11 +7,19 @@ let smtpTransporter = null;
 function getSmtpTransporter() {
   if (smtpTransporter) return smtpTransporter;
   const host = process.env.SMTP_HOST;
-  const port = Number(process.env.SMTP_PORT || 587);
+  const port = Number(process.env.SMTP_PORT || 465);
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
   if (!host || !user || !pass) return null;
-  smtpTransporter = nodemailer.createTransport({ host, port, secure: port === 465, auth: { user, pass } });
+  smtpTransporter = nodemailer.createTransport({
+    host,
+    port,
+    secure: port === 465,
+    auth: { user, pass },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000
+  });
   return smtpTransporter;
 }
 
@@ -19,12 +27,31 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// Send via Resend REST API (works on Render – no SMTP port needed)
+async function sendViaSmtp({ to, from, subject, html, text }) {
+  const mailer = getSmtpTransporter();
+  if (!mailer) return false;
+
+  let attempt = 0;
+  while (attempt <= 2) {
+    try {
+      const info = await mailer.sendMail({ from, to, subject, text, html });
+      console.log(`Email sent via SMTP: ${info.messageId || "ok"}`);
+      return true;
+    } catch (error) {
+      console.error(`SMTP attempt ${attempt + 1}/3 failed:`, error?.message || error);
+      if (attempt >= 2) break;
+      await sleep(1000 * Math.pow(2, attempt));
+    }
+    attempt += 1;
+  }
+  return false;
+}
+
 async function sendViaResend({ to, from, subject, html, text }) {
   const apiKey = process.env.RESEND_API_KEY;
-  let attempt = 0;
-  let lastError = null;
+  if (!apiKey) return false;
 
+  let attempt = 0;
   while (attempt <= 2) {
     try {
       const response = await fetch("https://api.resend.com/emails", {
@@ -49,53 +76,30 @@ async function sendViaResend({ to, from, subject, html, text }) {
 
       const data = await response.json();
       console.log(`Email sent via Resend: ${data.id}`);
-      return;
+      return true;
     } catch (error) {
-      lastError = error;
       console.error(`Resend attempt ${attempt + 1}/3 failed:`, error?.message || error);
       if (attempt >= 2) break;
       await sleep(1000 * Math.pow(2, attempt));
     }
     attempt += 1;
   }
-
-  console.error("Email permanently failed after retries.", lastError?.message || lastError);
+  return false;
 }
 
-// Send via SMTP (local dev / self-hosted)
-async function sendViaSmtp({ to, from, subject, html, text }) {
-  const mailer = getSmtpTransporter();
-  if (!mailer) {
-    console.log("Email skipped: no transport configured (set RESEND_API_KEY or SMTP_* vars).");
-    return;
-  }
-
-  let attempt = 0;
-  let lastError = null;
-  while (attempt <= 2) {
-    try {
-      const info = await mailer.sendMail({ from, to, subject, text, html });
-      console.log(`Email sent via SMTP: ${info.messageId || "ok"}`);
-      return;
-    } catch (error) {
-      lastError = error;
-      console.error(`SMTP attempt ${attempt + 1}/3 failed:`, error?.message || error);
-      if (attempt >= 2) break;
-      await sleep(1000 * Math.pow(2, attempt));
-    }
-    attempt += 1;
-  }
-  console.error("Email permanently failed after retries.", lastError?.message || lastError);
-}
-
-// Unified send — prefers Resend, falls back to SMTP
+// Unified send — tries SMTP first, falls back to Resend
 async function send({ to, subject, html, text }) {
   const from = process.env.EMAIL_FROM || process.env.SMTP_USER || "Eureka Women Fellowship <onboarding@resend.dev>";
 
-  if (process.env.RESEND_API_KEY) {
-    return sendViaResend({ to, from, subject, html, text });
-  }
-  return sendViaSmtp({ to, from, subject, html, text });
+  // Try SMTP first (Gmail App Password)
+  const smtpOk = await sendViaSmtp({ to, from, subject, html, text });
+  if (smtpOk) return;
+
+  // Fall back to Resend API
+  const resendOk = await sendViaResend({ to, from, subject, html, text });
+  if (resendOk) return;
+
+  console.error("Email permanently failed via all transports.");
 }
 
 // ─── Email templates ──────────────────────────────────────────────────────────

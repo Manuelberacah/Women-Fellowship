@@ -3,7 +3,7 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000/api";
 const API_ORIGIN = API_BASE.replace(/\/api$/, "");
 
-export async function submitPrayerRequest(payload: { name: string; request: string }) {
+export async function submitPrayerRequest(payload: { name: string; email?: string; request: string }) {
   await axios.post(`${API_BASE}/prayers`, payload);
 }
 

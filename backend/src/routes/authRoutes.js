@@ -1,8 +1,6 @@
 const crypto = require("crypto");
 const express = require("express");
 
-// APP_URL is used specifically for building email links.
-// FRONTEND_URL may be set to "*" for CORS which would break email links.
 function getAppUrl() {
   const appUrl = process.env.APP_URL;
   if (appUrl) return appUrl.trim().replace(/\/$/, "");
@@ -10,11 +8,11 @@ function getAppUrl() {
   const first = frontendUrl.split(",")[0].trim().replace(/\/$/, "");
   return first && first !== "*" ? first : "http://localhost:3000";
 }
-const bcrypt = require("bcryptjs");
+
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const { sendOtp, verifyOtp } = require("../utils/otpService");
-const { sendNotification, sendVerificationEmail } = require("../utils/emailService");
+const { sendNotification, sendVerificationEmail, sendWelcomeEmail } = require("../utils/emailService");
 const auth = require("../middleware/auth");
 const admin = require("../middleware/admin");
 
@@ -24,36 +22,37 @@ const ADMIN_PASSWORD = "@Blessy717";
 
 router.post("/register", async (req, res) => {
   try {
-    const { name, phone, email, churchName, city, password, mode, phoneVerified } = req.body;
+    const { name, phone, email, churchName, city, mode, phoneVerified } = req.body;
 
-    const existing = await User.findOne({ $or: [{ email }, { phone }] });
-    if (existing) return res.status(400).json({ message: "User already exists" });
-
-    const passwordHash = password ? await bcrypt.hash(password, 10) : undefined;
+    const filter = [];
+    if (email) filter.push({ email });
+    if (phone) filter.push({ phone });
+    if (filter.length) {
+      const existing = await User.findOne({ $or: filter });
+      if (existing) return res.status(400).json({ message: "User already exists" });
+    }
 
     let emailVerifyToken;
     let emailVerifyExpires;
-    if (mode !== "phone" && email) {
+    if (mode === "email" && email) {
       emailVerifyToken = crypto.randomBytes(32).toString("hex");
       emailVerifyExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
     }
 
     const user = await User.create({
       name,
-      phone,
-      email,
+      phone: phone || undefined,
+      email: email || undefined,
       churchName,
       city,
-      passwordHash,
       phoneVerified: mode === "phone" ? Boolean(phoneVerified) : false,
       emailVerified: false,
       emailVerifyToken,
       emailVerifyExpires
     });
 
-    if (mode !== "phone" && email && emailVerifyToken) {
-      const frontendUrl = getAppUrl();
-      const verifyUrl = `${frontendUrl}/verify-email?token=${emailVerifyToken}`;
+    if (mode === "email" && email && emailVerifyToken) {
+      const verifyUrl = `${getAppUrl()}/verify-email?token=${emailVerifyToken}`;
       sendVerificationEmail(email, name, verifyUrl).catch(() => null);
     }
 
@@ -68,23 +67,11 @@ router.post("/register", async (req, res) => {
   }
 });
 
-router.post("/login", async (req, res) => {
-  const { email, password } = req.body;
-  const user = await User.findOne({ email });
-  if (!user) return res.status(400).json({ message: "Invalid credentials" });
-  const valid = await bcrypt.compare(password, user.passwordHash || "");
-  if (!valid) return res.status(400).json({ message: "Invalid credentials" });
-
-  const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "7d" });
-  res.json({ token, user });
-});
-
 router.post("/admin-login", async (req, res) => {
   const { email, password } = req.body;
   if (email !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
     return res.status(400).json({ message: "Invalid credentials" });
   }
-
   const token = jwt.sign({ id: "admin-static", role: "admin", email }, process.env.JWT_SECRET, { expiresIn: "7d" });
   res.json({ token, user: { email, role: "admin", name: "Admin" } });
 });
@@ -163,6 +150,9 @@ router.get("/verify-email", async (req, res) => {
   user.emailVerifyExpires = undefined;
   await user.save();
 
+  // Send welcome email to the user
+  sendWelcomeEmail(user.email, user.name).catch(() => null);
+
   res.json({ message: "Email verified successfully" });
 });
 
@@ -179,8 +169,7 @@ router.post("/resend-verification", async (req, res) => {
   user.emailVerifyExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
   await user.save();
 
-  const frontendUrl = getAppUrl();
-  const verifyUrl = `${frontendUrl}/verify-email?token=${emailVerifyToken}`;
+  const verifyUrl = `${getAppUrl()}/verify-email?token=${emailVerifyToken}`;
   sendVerificationEmail(email, user.name, verifyUrl).catch(() => null);
 
   res.json({ message: "Verification email sent" });
@@ -189,10 +178,9 @@ router.post("/resend-verification", async (req, res) => {
 router.get("/users", auth, admin, async (req, res) => {
   const skip = Number(req.query.skip || 0);
   const limit = Number(req.query.limit || 10);
-  const filter = { $or: [{ emailVerified: true }, { phoneVerified: true }] };
   const [users, total] = await Promise.all([
-    User.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
-    User.countDocuments(filter)
+    User.find().sort({ createdAt: -1 }).skip(skip).limit(limit),
+    User.countDocuments()
   ]);
   res.json({ users, total });
 });

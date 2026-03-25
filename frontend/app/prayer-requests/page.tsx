@@ -7,6 +7,7 @@ import Spinner from "../../components/Spinner";
 
 export default function PrayerRequestsPage() {
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [request, setRequest] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -16,9 +17,10 @@ export default function PrayerRequestsPage() {
     setStatus(null);
     setIsSubmitting(true);
     try {
-      await submitPrayerRequest({ name, request });
+      await submitPrayerRequest({ name, email, request });
       setStatus("Prayer request received. We are praying with you.");
       setName("");
+      setEmail("");
       setRequest("");
     } catch {
       setStatus("Unable to submit right now.");
@@ -52,6 +54,13 @@ export default function PrayerRequestsPage() {
                 placeholder="Name"
                 className="mb-4 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
                 required
+              />
+              <input
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="Email (we'll notify you when prayed for)"
+                type="email"
+                className="mb-4 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
               />
               <textarea
                 value={request}

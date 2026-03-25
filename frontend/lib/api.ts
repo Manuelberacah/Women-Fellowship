@@ -126,6 +126,16 @@ export async function uploadGalleryImage(token: string, file: File, title?: stri
   return response.data?.image;
 }
 
+export async function fetchGalleryImagesAdmin(token: string) {
+  const response = await axios.get(`${API_BASE}/gallery`, authHeaders(token));
+  return response.data?.images || [];
+}
+
+export async function deleteGalleryImage(token: string, id: string) {
+  const response = await axios.delete(`${API_BASE}/gallery/${id}`, authHeaders(token));
+  return response.data;
+}
+
 export async function fetchWallApproved(): Promise<{ name: string; message: string }[]> {
   const response = await axios.get(`${API_BASE}/wall`);
   return response.data?.posts || [];

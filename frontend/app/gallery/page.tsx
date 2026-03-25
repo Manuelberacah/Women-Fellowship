@@ -5,7 +5,7 @@ export default function GalleryPage() {
   return (
     <section className="section-pad py-20">
       <SectionHeader eyebrow="Gallery" title="Moments of Worship & Fellowship">
-        Admins can upload event images and highlight the beauty of community in Christ.
+        Capturing the beauty of community, prayer, and faith in Christ.
       </SectionHeader>
       <GalleryGrid />
     </section>

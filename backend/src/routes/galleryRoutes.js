@@ -39,4 +39,22 @@ router.post("/", auth, admin, upload.single("image"), async (req, res) => {
   }
 });
 
+router.delete("/:id", auth, admin, async (req, res) => {
+  try {
+    const image = await GalleryImage.findByIdAndDelete(req.params.id);
+    if (!image) return res.status(404).json({ message: "Image not found" });
+
+    // Try to delete the file from disk
+    if (image.imageUrl?.startsWith("/uploads/")) {
+      const filePath = path.join(__dirname, "..", "..", image.imageUrl);
+      fs.unlink(filePath, () => {});
+    }
+
+    res.json({ message: "Deleted", image });
+  } catch (error) {
+    console.error("Gallery delete failed:", error?.message || error);
+    res.status(500).json({ message: "Delete failed" });
+  }
+});
+
 module.exports = router;

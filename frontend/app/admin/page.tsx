@@ -7,13 +7,14 @@ import {
   unapproveWallPost,
   deleteWallPost,
   fetchContactMessages,
-  fetchGalleryImages,
+  fetchGalleryImagesAdmin,
   fetchMembers,
   fetchPrayerRequests,
   fetchRegistrations,
   fetchWallAll,
   adminLogin,
   uploadGalleryImage,
+  deleteGalleryImage,
   markPrayerPrayed,
   markContactRead
 } from "../../lib/api";
@@ -41,7 +42,7 @@ export default function AdminPage() {
   const [registrationsTotal, setRegistrationsTotal] = useState(0);
 
   const [wallPosts, setWallPosts] = useState<any[]>([]);
-  const [gallery, setGallery] = useState<string[]>([]);
+  const [gallery, setGallery] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
@@ -66,7 +67,7 @@ export default function AdminPage() {
         fetchContactMessages(authToken, 0, PAGE_SIZE),
         fetchRegistrations(authToken, 0, PAGE_SIZE),
         fetchWallAll(authToken),
-        fetchGalleryImages()
+        fetchGalleryImagesAdmin(authToken)
       ]);
       setMembers(membersRes.items);
       setMembersTotal(membersRes.total);
@@ -168,12 +169,18 @@ export default function AdminPage() {
     setUploading(true);
     try {
       await uploadGalleryImage(token, file);
-      const updated = await fetchGalleryImages();
+      const updated = await fetchGalleryImagesAdmin(token);
       setGallery(updated);
       event.target.value = "";
     } finally {
       setUploading(false);
     }
+  };
+
+  const handleDeleteImage = async (id: string) => {
+    if (!token) return;
+    await deleteGalleryImage(token, id);
+    setGallery((prev) => prev.filter((img) => img._id !== id));
   };
 
   const unreadContacts = contacts.filter((c) => !c.read).length;
@@ -280,14 +287,27 @@ export default function AdminPage() {
         </div>
 
         <div className="rounded-3xl bg-white p-6 shadow-card">
-          <h3 className="font-display text-xl text-primary-900">Gallery Uploads</h3>
-          <p className="mt-2 text-sm text-slate-600">Upload new photos to appear in the gallery.</p>
+          <h3 className="font-display text-xl text-primary-900">Gallery</h3>
           <input type="file" accept="image/*" onChange={handleUpload} disabled={uploading} className="mt-4 w-full text-sm text-slate-600" />
           {uploading && <p className="mt-2 text-sm text-slate-500">Uploading...</p>}
           <div className="mt-4 grid grid-cols-3 gap-3">
-            {gallery.slice(0, 6).map((img) => (
-              <img key={img} src={img} alt="Gallery" className="h-24 w-full rounded-2xl object-cover" />
-            ))}
+            {gallery.map((img) => {
+              const src = img.imageUrl?.startsWith("/")
+                ? `${(process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000/api").replace(/\/api$/, "")}${img.imageUrl}`
+                : img.imageUrl;
+              return (
+                <div key={img._id} className="group relative">
+                  <img src={src} alt={img.title || "Gallery"} className="h-24 w-full rounded-2xl object-cover" />
+                  <button
+                    onClick={() => handleDeleteImage(img._id)}
+                    className="absolute right-1 top-1 hidden h-6 w-6 items-center justify-center rounded-full bg-red-600 text-xs text-white group-hover:flex"
+                    title="Delete image"
+                  >
+                    X
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

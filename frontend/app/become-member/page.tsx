@@ -28,6 +28,7 @@ export default function BecomeMemberPage() {
   const [otpVerified, setOtpVerified] = useState(false);
   const [profileCreated, setProfileCreated] = useState(false);
   const [awaitingVerification, setAwaitingVerification] = useState(false);
+  const [alreadyMember, setAlreadyMember] = useState(false);
   const [resending, setResending] = useState(false);
   const [scriptReady, setScriptReady] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -42,6 +43,34 @@ export default function BecomeMemberPage() {
   const handleChange = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
+
+  // Check if already a member on mount
+  useEffect(() => {
+    if (localStorage.getItem("eureka-member") === "true") {
+      setAlreadyMember(true);
+    }
+  }, []);
+
+  // Listen for email verification from another tab
+  useEffect(() => {
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel("eureka-verify");
+      bc.onmessage = (event) => {
+        if (event.data?.type === "email-verified") {
+          setAwaitingVerification(false);
+          setAlreadyMember(true);
+          localStorage.setItem("eureka-member", "true");
+          toast.success("Email verified successfully! Welcome to Eureka!");
+        }
+      };
+    } catch {
+      // BroadcastChannel not supported
+    }
+    return () => {
+      if (bc) bc.close();
+    };
+  }, [toast]);
 
   // Start 60s countdown for resend button
   const startResendCountdown = () => {
@@ -124,6 +153,9 @@ export default function BecomeMemberPage() {
         startResendCountdown();
         toast.success("Verification email sent! Please check your inbox.");
       } else {
+        // Phone registration is complete — mark as member
+        localStorage.setItem("eureka-member", "true");
+        setAlreadyMember(true);
         toast.success("Registration successful. Welcome to Eureka!");
       }
     } catch {
@@ -182,6 +214,8 @@ export default function BecomeMemberPage() {
               phoneVerified: true
             });
             setProfileCreated(true);
+            localStorage.setItem("eureka-member", "true");
+            setAlreadyMember(true);
             toast.success("Phone verified and profile created!");
           } else {
             toast.success("Phone verified successfully.");
@@ -221,6 +255,25 @@ export default function BecomeMemberPage() {
       setResending(false);
     }
   };
+
+  // Already a member — show welcome back message
+  if (alreadyMember) {
+    return (
+      <section className="section-pad py-20">
+        <SectionHeader eyebrow="Membership" title="You're Already a Member!">
+          Thank you for being part of Eureka Women Fellowship. God bless you!
+        </SectionHeader>
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <a href="/" className="rounded-full border border-primary-200 px-6 py-3 text-sm font-semibold text-primary-700">
+            Back to Home
+          </a>
+          <a href="/event-registration" className="rounded-full bg-primary-700 px-6 py-3 text-sm font-semibold text-white">
+            Register for Events
+          </a>
+        </div>
+      </section>
+    );
+  }
 
   if (awaitingVerification) {
     return (

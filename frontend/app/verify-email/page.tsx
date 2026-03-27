@@ -27,6 +27,18 @@ function VerifyEmailContent() {
         setStatus("success");
         setMessage("Your email has been verified! You are now an official member of Eureka Women Fellowship.");
         toast.success("Email verified successfully! Welcome to Eureka!");
+
+        // Save member status to localStorage
+        localStorage.setItem("eureka-member", "true");
+
+        // Notify the old tab (become-member page) that verification is done
+        try {
+          const bc = new BroadcastChannel("eureka-verify");
+          bc.postMessage({ type: "email-verified" });
+          bc.close();
+        } catch {
+          // BroadcastChannel not supported in some browsers — that's okay
+        }
       })
       .catch((error: any) => {
         setStatus("error");

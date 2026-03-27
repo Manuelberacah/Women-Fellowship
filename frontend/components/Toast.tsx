@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useState } from "react";
+import React, { createContext, useCallback, useContext, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 type ToastType = "success" | "error" | "warning" | "info";
@@ -24,7 +24,7 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 
 let nextId = 0;
 
-const icons: Record<ToastType, JSX.Element> = {
+const icons: Record<ToastType, React.ReactNode> = {
   success: (
     <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />

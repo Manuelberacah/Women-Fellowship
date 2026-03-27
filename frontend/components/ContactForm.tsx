@@ -1,13 +1,14 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import { submitContactMessage } from "../lib/api";
 import Spinner from "./Spinner";
+import { useToast } from "./Toast";
 
 export default function ContactForm() {
   const [form, setForm] = useState({ name: "", email: "", message: "" });
-  const [status, setStatus] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const toast = useToast();
 
   const handleChange = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -15,14 +16,13 @@ export default function ContactForm() {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    setStatus(null);
     setIsSubmitting(true);
     try {
       await submitContactMessage(form);
-      setStatus("Message sent! We will respond soon.");
+      toast.success("Message sent! We will respond soon.");
       setForm({ name: "", email: "", message: "" });
     } catch {
-      setStatus("Unable to send message right now.");
+      toast.error("Unable to send message right now.");
     } finally {
       setIsSubmitting(false);
     }
@@ -55,7 +55,6 @@ export default function ContactForm() {
           className="rounded-2xl border border-slate-200 px-4 py-3"
           required
         />
-        {status && <p className="text-sm text-primary-700">{status}</p>}
         <button
           className="inline-flex w-fit items-center gap-2 rounded-full bg-primary-700 px-6 py-3 text-sm font-semibold text-white"
           disabled={isSubmitting}

@@ -5,17 +5,20 @@ import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import SectionHeader from "../../components/SectionHeader";
 import { verifyEmailToken } from "../../lib/api";
+import { useToast } from "../../components/Toast";
 
 function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [message, setMessage] = useState("");
+  const toast = useToast();
 
   useEffect(() => {
     if (!token) {
       setStatus("error");
       setMessage("No verification token found in the link.");
+      toast.error("No verification token found in the link.");
       return;
     }
 
@@ -23,10 +26,13 @@ function VerifyEmailContent() {
       .then(() => {
         setStatus("success");
         setMessage("Your email has been verified! You are now an official member of Eureka Women Fellowship.");
+        toast.success("Email verified successfully! Welcome to Eureka!");
       })
       .catch((error: any) => {
         setStatus("error");
-        setMessage(error?.response?.data?.message || "Verification failed. The link may have expired.");
+        const msg = error?.response?.data?.message || "Verification failed. The link may have expired.";
+        setMessage(msg);
+        toast.error(msg);
       });
   }, [token]);
 
@@ -40,9 +46,6 @@ function VerifyEmailContent() {
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <a href="/" className="rounded-full border border-primary-200 px-6 py-3 text-sm font-semibold text-primary-700">
             Back to Home
-          </a>
-          <a href="/member" className="rounded-full bg-primary-700 px-6 py-3 text-sm font-semibold text-white">
-            Go to Member Dashboard
           </a>
         </div>
       )}

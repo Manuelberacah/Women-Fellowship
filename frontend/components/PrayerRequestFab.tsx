@@ -1,28 +1,29 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { submitPrayerRequest } from "../lib/api";
 import Spinner from "./Spinner";
+import { useToast } from "./Toast";
 
 export default function PrayerRequestFab() {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [request, setRequest] = useState("");
-  const [status, setStatus] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const toast = useToast();
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    setStatus(null);
     setIsSubmitting(true);
     try {
       await submitPrayerRequest({ name, request });
-      setStatus("Prayer request submitted. Our team is praying with you.");
+      toast.success("Prayer request submitted. Our team is praying with you.");
       setName("");
       setRequest("");
-    } catch (error) {
-      setStatus("Unable to submit right now. Please try again.");
+      setOpen(false);
+    } catch {
+      toast.error("Unable to submit right now. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -90,7 +91,6 @@ export default function PrayerRequestFab() {
                   className="rounded-2xl border border-slate-200 px-4 py-3"
                   required
                 />
-                {status && <p className="text-sm text-primary-700">{status}</p>}
                 <button
                   className="inline-flex items-center gap-2 rounded-full bg-primary-700 px-4 py-3 text-sm font-semibold text-white"
                   disabled={isSubmitting}

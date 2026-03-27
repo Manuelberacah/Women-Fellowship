@@ -1,10 +1,11 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import SectionHeader from "../../components/SectionHeader";
 import { submitEurekaWall } from "../../lib/api";
 import { motion } from "framer-motion";
 import Spinner from "../../components/Spinner";
+import { useToast } from "../../components/Toast";
 
 const sampleMessages = [
   "I feel called to serve in children's ministry.",
@@ -15,20 +16,19 @@ const sampleMessages = [
 export default function EurekaWallPage() {
   const [name, setName] = useState("");
   const [message, setMessage] = useState("");
-  const [status, setStatus] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const toast = useToast();
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    setStatus(null);
     setIsSubmitting(true);
     try {
       await submitEurekaWall({ name, message });
-      setStatus("Your message was submitted for approval.");
+      toast.success("Your message was submitted for approval.");
       setName("");
       setMessage("");
     } catch {
-      setStatus("Unable to submit right now.");
+      toast.error("Unable to submit right now.");
     } finally {
       setIsSubmitting(false);
     }
@@ -56,7 +56,6 @@ export default function EurekaWallPage() {
           className="mb-4 w-full rounded-2xl border border-slate-200 px-4 py-3"
           required
         />
-        {status && <p className="mb-4 text-sm text-primary-700">{status}</p>}
         <button
           className="inline-flex items-center gap-2 rounded-full bg-primary-700 px-6 py-3 text-sm font-semibold text-white"
           disabled={isSubmitting}

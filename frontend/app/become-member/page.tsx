@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import SectionHeader from "../../components/SectionHeader";
 import { registerMember, verifyMsg91Widget, resendVerificationEmail } from "../../lib/api";
 import Spinner from "../../components/Spinner";
+import { useToast } from "../../components/Toast";
 
 declare global {
   interface Window {
@@ -24,7 +25,6 @@ function detectMode(contact: string): "email" | "phone" | null {
 
 export default function BecomeMemberPage() {
   const [form, setForm] = useState({ name: "", contact: "", church: "", city: "" });
-  const [message, setMessage] = useState<string | null>(null);
   const [otpVerified, setOtpVerified] = useState(false);
   const [profileCreated, setProfileCreated] = useState(false);
   const [awaitingVerification, setAwaitingVerification] = useState(false);
@@ -33,12 +33,36 @@ export default function BecomeMemberPage() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
+  const [resendCountdown, setResendCountdown] = useState(0);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const toast = useToast();
 
   const mode = detectMode(form.contact);
 
   const handleChange = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
+
+  // Start 60s countdown for resend button
+  const startResendCountdown = () => {
+    setResendCountdown(60);
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    countdownRef.current = setInterval(() => {
+      setResendCountdown((prev) => {
+        if (prev <= 1) {
+          if (countdownRef.current) clearInterval(countdownRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
+  }, []);
 
   // Load MSG91 OTP script when phone mode detected
   useEffect(() => {
@@ -71,16 +95,14 @@ export default function BecomeMemberPage() {
 
   const handleRegister = async (event: React.FormEvent) => {
     event.preventDefault();
-    setMessage(null);
 
     if (!mode) {
-      setMessage("Please enter a valid email address or phone number.");
+      toast.warning("Please enter a valid email address or phone number.");
       return;
     }
 
-    // Phone mode: must verify OTP first
     if (mode === "phone" && !otpVerified) {
-      setMessage("Please verify your phone number with OTP first.");
+      toast.warning("Please verify your phone number with OTP first.");
       return;
     }
 
@@ -99,33 +121,34 @@ export default function BecomeMemberPage() {
       setProfileCreated(true);
       if (mode === "email") {
         setAwaitingVerification(true);
+        startResendCountdown();
+        toast.success("Verification email sent! Please check your inbox.");
       } else {
-        setMessage("Registration successful. Welcome to Eureka!");
+        toast.success("Registration successful. Welcome to Eureka!");
       }
     } catch {
-      setMessage("Unable to register at the moment. Please try again.");
+      toast.error("Unable to register at the moment. Please try again.");
     } finally {
       setIsRegistering(false);
     }
   };
 
   const handleVerifyPhone = async () => {
-    setMessage(null);
     if (cooldownUntil && Date.now() < cooldownUntil) {
       const seconds = Math.ceil((cooldownUntil - Date.now()) / 1000);
-      setMessage(`Please wait ${seconds}s before requesting OTP again.`);
+      toast.warning(`Please wait ${seconds}s before requesting OTP again.`);
       return;
     }
     if (!MSG91_WIDGET_ID || !MSG91_TOKEN_AUTH) {
-      setMessage("MSG91 credentials are missing. Please update frontend .env.");
+      toast.error("MSG91 credentials are missing.");
       return;
     }
     if (!form.contact.trim()) {
-      setMessage("Please enter your phone number first.");
+      toast.warning("Please enter your phone number first.");
       return;
     }
     if (!scriptReady || !window.initSendOTP) {
-      setMessage("OTP widget is still loading. Please try again in a moment.");
+      toast.info("OTP widget is still loading. Please try again in a moment.");
       return;
     }
 
@@ -141,7 +164,7 @@ export default function BecomeMemberPage() {
       success: async (data: any) => {
         const accessToken = data?.access_token || data?.accessToken || data?.token || data?.message;
         if (!accessToken) {
-          setMessage("OTP verified but no access token returned.");
+          toast.error("OTP verified but no access token returned.");
           setIsVerifying(false);
           return;
         }
@@ -159,29 +182,20 @@ export default function BecomeMemberPage() {
               phoneVerified: true
             });
             setProfileCreated(true);
-            setMessage("Phone verified and profile created.");
+            toast.success("Phone verified and profile created!");
           } else {
-            setMessage("Phone verified successfully.");
+            toast.success("Phone verified successfully.");
           }
           setCooldownUntil(Date.now() + 10000);
         } catch (error: any) {
-          const provider = error?.response?.data?.provider;
-          const apiMessage =
-            error?.response?.data?.message ||
-            provider?.message ||
-            provider?.type;
-          const details = provider ? ` (${JSON.stringify(provider)})` : "";
-          setMessage(
-            apiMessage
-              ? `Unable to verify OTP: ${apiMessage}${details}`
-              : "Unable to verify OTP with server. Please try again."
-          );
+          const apiMessage = error?.response?.data?.message;
+          toast.error(apiMessage || "Unable to verify OTP. Please try again.");
         } finally {
           setIsVerifying(false);
         }
       },
       failure: (error: any) => {
-        setMessage(error?.message || "OTP verification failed.");
+        toast.error(error?.message || "OTP verification failed.");
         setIsVerifying(false);
       }
     };
@@ -189,19 +203,20 @@ export default function BecomeMemberPage() {
     try {
       window.initSendOTP(configuration);
     } catch {
-      setMessage("Unable to start OTP. Please try again.");
+      toast.error("Unable to start OTP. Please try again.");
       setIsVerifying(false);
     }
   };
 
   const handleResend = async () => {
-    if (!form.contact.trim()) return;
+    if (!form.contact.trim() || resendCountdown > 0) return;
     setResending(true);
     try {
       await resendVerificationEmail(form.contact.trim());
-      setMessage("Verification email resent. Please check your inbox.");
+      toast.success("Verification email resent. Please check your inbox.");
+      startResendCountdown();
     } catch {
-      setMessage("Unable to resend. Please try again.");
+      toast.error("Unable to resend. Please try again.");
     } finally {
       setResending(false);
     }
@@ -215,14 +230,15 @@ export default function BecomeMemberPage() {
         </SectionHeader>
         <div className="mt-8 rounded-3xl bg-white p-8 shadow-card text-center">
           <p className="text-slate-600 text-sm">Didn&apos;t receive the email? Check your spam folder or resend below.</p>
-          {message && <p className="mt-3 text-sm text-primary-700">{message}</p>}
           <button
             onClick={handleResend}
-            disabled={resending}
+            disabled={resending || resendCountdown > 0}
             className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary-700 px-6 py-3 text-sm font-semibold text-white disabled:opacity-60"
           >
             {resending ? <Spinner /> : null}
-            Resend Verification Email
+            {resendCountdown > 0
+              ? `Resend in ${resendCountdown}s`
+              : "Resend Verification Email"}
           </button>
         </div>
       </section>
@@ -293,8 +309,6 @@ export default function BecomeMemberPage() {
           {mode === "phone" && (
             <div id="otp-container" className="md:col-span-2" />
           )}
-
-          {message && <p className="text-sm text-primary-700 md:col-span-2">{message}</p>}
 
           <button
             disabled={

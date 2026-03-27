@@ -1,16 +1,17 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import SectionHeader from "../../components/SectionHeader";
 import axios from "axios";
 import Spinner from "../../components/Spinner";
+import { useToast } from "../../components/Toast";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000/api";
 
 export default function EventRegistrationPage() {
   const [form, setForm] = useState({ name: "", email: "", phone: "" });
-  const [status, setStatus] = useState<string | null>(null);
   const [isPaying, setIsPaying] = useState(false);
+  const toast = useToast();
 
   const handleChange = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -27,11 +28,10 @@ export default function EventRegistrationPage() {
   };
 
   const handlePay = async () => {
-    setStatus(null);
     setIsPaying(true);
     const loaded = await loadRazorpay();
     if (!loaded) {
-      setStatus("Unable to load payment gateway.");
+      toast.error("Unable to load payment gateway.");
       setIsPaying(false);
       return;
     }
@@ -45,7 +45,7 @@ export default function EventRegistrationPage() {
         phone: form.phone
       });
     } catch {
-      setStatus("Unable to reach payment server. Please try again in a moment.");
+      toast.error("Unable to reach payment server. Please try again in a moment.");
       setIsPaying(false);
       return;
     }
@@ -65,9 +65,9 @@ export default function EventRegistrationPage() {
             signature: response.razorpay_signature,
             attendee: form
           });
-          setStatus("Payment successful! Your digital event pass is ready in your dashboard.");
+          toast.success("Payment successful! Your registration is confirmed.");
         } catch {
-          setStatus("Payment captured but verification failed. Please contact support.");
+          toast.error("Payment captured but verification failed. Please contact support.");
         } finally {
           setIsPaying(false);
         }
@@ -119,7 +119,6 @@ export default function EventRegistrationPage() {
           {isPaying ? <Spinner /> : null}
           Pay ₹200 & Register
         </button>
-        {status && <p className="mt-4 text-sm text-primary-700">{status}</p>}
       </div>
     </section>
   );

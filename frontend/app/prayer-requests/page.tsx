@@ -4,26 +4,26 @@ import { useState } from "react";
 import SectionHeader from "../../components/SectionHeader";
 import { submitPrayerRequest } from "../../lib/api";
 import Spinner from "../../components/Spinner";
+import { useToast } from "../../components/Toast";
 
 export default function PrayerRequestsPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [request, setRequest] = useState("");
-  const [status, setStatus] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const toast = useToast();
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    setStatus(null);
     setIsSubmitting(true);
     try {
       await submitPrayerRequest({ name, email, request });
-      setStatus("Prayer request received. We are praying with you.");
+      toast.success("Prayer request received. We are praying with you.");
       setName("");
       setEmail("");
       setRequest("");
     } catch {
-      setStatus("Unable to submit right now.");
+      toast.error("Unable to submit right now.");
     } finally {
       setIsSubmitting(false);
     }
@@ -70,7 +70,6 @@ export default function PrayerRequestsPage() {
                 className="mb-4 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
                 required
               />
-              {status && <p className="mb-4 text-sm text-primary-700">{status}</p>}
               <button
                 className="inline-flex items-center gap-2 rounded-full bg-primary-700 px-6 py-3 text-sm font-semibold text-white"
                 disabled={isSubmitting}
